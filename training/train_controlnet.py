@@ -54,7 +54,7 @@ from huggingface_hub import create_repo, upload_folder
 from packaging import version
 from torchvision import transforms
 from tqdm.auto import tqdm
-from transformers import AutoTokenizer, PretrainedConfig
+from transformers import AutoTokenizer, PretrainedConfig, Adafactor
 
 if is_wandb_available():
     import wandb
@@ -365,6 +365,7 @@ def parse_args(input_args=None):
         help="Number of hard resets of the lr in cosine_with_restarts scheduler.",
     )
     parser.add_argument("--lr_power", type=float, default=1.0, help="Power factor of the polynomial scheduler.")
+    parser.add_argument("--use_adafactor", action="store_true", help="Whether or not to use Adafactor.")
     parser.add_argument(
         "--use_8bit_adam", action="store_true", help="Whether or not to use 8-bit Adam from bitsandbytes."
     )
@@ -859,8 +860,10 @@ def main(args):
                 args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
         )
 
+    if args.use_adafactor:
+        optimizer_class = Adafactor
     # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
-    if args.use_8bit_adam:
+    elif args.use_8bit_adam:
         try:
             import bitsandbytes as bnb
         except ImportError:
@@ -874,13 +877,22 @@ def main(args):
 
     # Optimizer creation
     params_to_optimize = controlnet.parameters()
-    optimizer = optimizer_class(
-        params_to_optimize,
-        lr=args.learning_rate,
-        betas=(args.adam_beta1, args.adam_beta2),
-        weight_decay=args.adam_weight_decay,
-        eps=args.adam_epsilon,
-    )
+    if optimizer_class == Adafactor:
+        optimizer = Adafactor(
+            params_to_optimize,
+            scale_parameter=False,
+            relative_step=False,
+            warmup_init=False,
+            lr=args.learning_rate,
+        )
+    else:
+        optimizer = optimizer_class(
+            params_to_optimize,
+            lr=args.learning_rate,
+            betas=(args.adam_beta1, args.adam_beta2),
+            weight_decay=args.adam_weight_decay,
+            eps=args.adam_epsilon,
+        )
 
     train_dataset = make_train_dataset(args, tokenizer, accelerator)
 
