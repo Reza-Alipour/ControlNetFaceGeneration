@@ -5,3 +5,4 @@ torchvision>=0.15.0
 ftfy==6.1.1
 tensorboard==2.14.0
 diffusers==0.23.0
+bitsandbytes>=0.41.2
