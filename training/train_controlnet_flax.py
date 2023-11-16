@@ -324,7 +324,7 @@ def parse_args():
     parser.add_argument("--adam_weight_decay", type=float, default=1e-2, help="Weight decay to use.")
     parser.add_argument("--adam_epsilon", type=float, default=1e-08, help="Epsilon value for the Adam optimizer")
     parser.add_argument("--adafactor_decay_rate", type=float, default=8e-1)
-    parser.add_argument("--adafactor_multiply_by_parameter_scale", type=bool, default=False)
+    parser.add_argument("--adafactor_multiply_by_parameter_scale", action="store_true", default=False)
     parser.add_argument("--adafactor_weight_decay", type=float, default=None)
     parser.add_argument("--adafactor_epsilon", type=float, default=1e-30)
     parser.add_argument("--max_grad_norm", default=1.0, type=float, help="Max gradient norm.")
