@@ -323,9 +323,10 @@ def parse_args():
     parser.add_argument("--adam_beta2", type=float, default=0.999, help="The beta2 parameter for the Adam optimizer.")
     parser.add_argument("--adam_weight_decay", type=float, default=1e-2, help="Weight decay to use.")
     parser.add_argument("--adam_epsilon", type=float, default=1e-08, help="Epsilon value for the Adam optimizer")
-    parser.add_argument("--adafactor_decay_rate", type=float, default=1e-9)
-    parser.add_argument("--adafactor_weight_decay", type=float, default=1e-2)
-    parser.add_argument("--adafactor_epsilon", type=float, default=1e-8)
+    parser.add_argument("--adafactor_decay_rate", type=float, default=8e-1)
+    parser.add_argument("--adafactor_multiply_by_parameter_scale", type=bool, default=False)
+    parser.add_argument("--adafactor_weight_decay", type=float, default=None)
+    parser.add_argument("--adafactor_epsilon", type=float, default=1e-30)
     parser.add_argument("--max_grad_norm", default=1.0, type=float, help="Max gradient norm.")
     parser.add_argument("--push_to_hub", action="store_true", help="Whether or not to push the model to the Hub.")
     parser.add_argument("--hub_token", type=str, default=None, help="The token to use to push to the Model Hub.")
@@ -810,23 +811,28 @@ def main():
         args.learning_rate = args.learning_rate * total_train_batch_size
 
     constant_scheduler = optax.constant_schedule(args.learning_rate)
-
-    adamw = optax.adamw(
-        learning_rate=constant_scheduler,
-        b1=args.adam_beta1,
-        b2=args.adam_beta2,
-        eps=args.adam_epsilon,
-        weight_decay=args.adam_weight_decay,
-    )
-
-    adafactor = optax.adafactor(
-        learning_rate=constant_scheduler,
-
-    )
+    if args.optimizer == "adam":
+        optimizer = optax.adamw(
+            learning_rate=constant_scheduler,
+            b1=args.adam_beta1,
+            b2=args.adam_beta2,
+            eps=args.adam_epsilon,
+            weight_decay=args.adam_weight_decay,
+        )
+    elif args.optimizer == "adafactor":
+        optimizer = optax.adafactor(
+            learning_rate=constant_scheduler,
+            decay_rate=args.adafactor_decay_rate,
+            eps=args.adafactor_epsilon,
+            weight_decay_rate=args.adafactor_weight_decay,
+            multiply_by_parameter_scale=args.adafactor_multiply_by_parameter_scale
+        )
+    else:
+        raise ValueError(f"Unknown optimizer {args.optimizer}")
 
     optimizer = optax.chain(
         optax.clip_by_global_norm(args.max_grad_norm),
-        adamw,
+        optimizer,
     )
 
     state = train_state.TrainState.create(apply_fn=controlnet.__call__, params=controlnet_params, tx=optimizer)
