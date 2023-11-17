@@ -7,4 +7,5 @@ torchvision>=0.15.0
 ftfy==6.1.1
 tensorboard==2.14.0
 Jinja2==3.1.2
-diffusers==0.23.0
+diffusers==0.23.1
+xformers==0.0.21
