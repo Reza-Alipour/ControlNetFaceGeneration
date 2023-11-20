@@ -384,6 +384,8 @@ def parse_args(input_args=None):
     parser.add_argument("--max_grad_norm", default=1.0, type=float, help="Max gradient norm.")
     parser.add_argument("--push_to_hub", action="store_true", help="Whether or not to push the model to the Hub.")
     parser.add_argument("--hub_token", type=str, default=None, help="The token to use to push to the Model Hub.")
+    parser.add_argument("--hub_read_token", type=str, default=None,
+                        help="The token to use to read pretrained model and dataset.")
     parser.add_argument(
         "--hub_model_id",
         type=str,
@@ -596,6 +598,7 @@ def make_train_dataset(args, tokenizer, accelerator):
             args.dataset_name,
             args.dataset_config_name,
             cache_dir=args.cache_dir,
+            token=args.hub_read_token
         )
     else:
         if args.train_data_dir is not None:
@@ -782,7 +785,7 @@ def main(args):
 
     if args.controlnet_model_name_or_path:
         logger.info("Loading existing controlnet weights")
-        controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path)
+        controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path, token=args.hub_read_token)
     else:
         logger.info("Initializing controlnet weights from unet")
         controlnet = ControlNetModel.from_unet(unet)
