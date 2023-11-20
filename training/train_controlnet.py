@@ -640,6 +640,7 @@ def make_train_dataset(args, tokenizer, accelerator):
             raise ValueError(
                 f"`--conditioning_image_column` value '{args.conditioning_image_column}' not found in dataset columns. Dataset columns are: {', '.join(column_names)}"
             )
+    dataset = dataset.filter(lambda x: x[conditioning_image_column] is not None)
 
     def tokenize_captions(examples, is_train=True):
         captions = []
