@@ -1131,6 +1131,7 @@ def main(args):
             )
             upload_folder(
                 repo_id=repo_id,
+                token=args.hub_token,
                 folder_path=args.output_dir,
                 commit_message="End of training",
                 ignore_patterns=["step_*", "epoch_*"],
