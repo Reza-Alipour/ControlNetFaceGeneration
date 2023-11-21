@@ -8,3 +8,4 @@ diffusers==0.23.1
 bitsandbytes>=0.41.2
 torch>=2.0.0
 xformers==0.0.21
+wandb==0.16.0

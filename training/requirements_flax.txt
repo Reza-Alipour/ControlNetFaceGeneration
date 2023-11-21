@@ -9,3 +9,5 @@ tensorboard==2.14.0
 Jinja2==3.1.2
 diffusers==0.23.1
 xformers==0.0.21
+wandb==0.16.0
+jax==0.4.5
