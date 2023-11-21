@@ -1169,8 +1169,8 @@ def main(args):
     # Create the pipeline using using the trained modules and save it.
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
-        controlnet = accelerator.unwrap_model(controlnet)
-        controlnet.save_pretrained(args.output_dir)
+        unet = accelerator.unwrap_model(unet)
+        unet.save_pretrained(f'{args.output_dir}/unet')
 
         if args.push_to_hub:
             save_model_card(
