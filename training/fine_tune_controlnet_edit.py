@@ -611,9 +611,9 @@ def make_train_dataset(args, tokenizer, accelerator):
     elif args.single_image_tune:
         dataset = DatasetDict({
             "train": Dataset.from_dict({
-                "image": Image.open(args.image_path).convert('RGB'),
-                "text": args.text_prompt,
-                "condition": Image.open(args.condition_image_path).convert('RGB')
+                "image": [Image.open(args.image_path).convert('RGB')],
+                "text": [args.text_prompt],
+                "condition": [Image.open(args.condition_image_path).convert('RGB')]
             })
         })
     else:
