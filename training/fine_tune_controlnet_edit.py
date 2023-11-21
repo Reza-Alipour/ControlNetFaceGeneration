@@ -552,6 +552,8 @@ def parse_args(input_args=None):
     parser.add_argument("--train_text_encoder", action="store_true")
     parser.add_argument("--train_controlnet", action="store_true")
     parser.add_argument("--train_unet", action="store_true")
+    parser.add_argument("--load_unet_from_local", action="store_true")
+    parser.add_argument("--unet_local_path", type=str, default=None)
 
 
     if input_args is not None:
@@ -795,9 +797,12 @@ def main(args):
         args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision
     )
     vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", revision=args.revision)
-    unet = UNet2DConditionModel.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision
-    )
+    if args.load_unet_from_local:
+        unet = UNet2DConditionModel.from_pretrained(args.unet_local_path)
+    else:
+        unet = UNet2DConditionModel.from_pretrained(
+            args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision
+        )
 
     if args.controlnet_model_name_or_path:
         logger.info("Loading existing controlnet weights")
