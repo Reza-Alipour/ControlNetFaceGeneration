@@ -38,7 +38,7 @@ from PIL import Image
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import ProjectConfiguration, set_seed
-from datasets import load_dataset
+from datasets import load_dataset, Dataset, DatasetDict
 from diffusers import (
     AutoencoderKL,
     ControlNetModel,
@@ -467,6 +467,9 @@ def parse_args(input_args=None):
             " must exist to provide the captions for the images. Ignored if `dataset_name` is specified."
         ),
     )
+    parser.add_argument("--image_path", type=str, default=None)
+    parser.add_argument("--condition_image_path", type=str, default=None)
+    parser.add_argument("--text_prompt", type=str, default=None)
     parser.add_argument(
         "--image_column", type=str, default="image", help="The column of the dataset containing the target image."
     )
@@ -600,6 +603,14 @@ def make_train_dataset(args, tokenizer, accelerator):
             cache_dir=args.cache_dir,
             token=args.hub_read_token
         )
+    elif args.image_path:
+        dataset = DatasetDict({
+            "train": Dataset.from_dict({
+                "image": Image.open(args.image_path).convert('RGB'),
+                "text": args.text_prompt,
+                "condition": Image.open(args.condition_image_path).convert('RGB')
+            })
+        })
     else:
         if args.train_data_dir is not None:
             dataset = load_dataset(
