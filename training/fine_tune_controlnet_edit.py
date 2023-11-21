@@ -559,7 +559,7 @@ def parse_args(input_args=None):
     else:
         args = parser.parse_args()
 
-    if args.dataset_name is None and args.train_data_dir is None:
+    if args.dataset_name is None and args.train_data_dir is None and args.single_image_tune is not True:
         raise ValueError("Specify either `--dataset_name` or `--train_data_dir`")
 
     if args.dataset_name is not None and args.train_data_dir is not None:
