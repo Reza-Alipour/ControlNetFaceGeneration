@@ -920,10 +920,11 @@ def main(args):
             params.append(param)
         else:
             params_lowlr.append(param)
+            param.requires_grad = False
 
     params_to_optimize = [
         {'params': params, 'lr': args.learning_rate},
-        {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
+        # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
     ]
 
     # Optimizer creation
