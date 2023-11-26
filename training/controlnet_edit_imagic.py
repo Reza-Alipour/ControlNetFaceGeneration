@@ -1138,6 +1138,7 @@ def main(args):
             image = pipeline(
                     image=cond, prompt_embeds=new_emb, guidance_scale=1, num_inference_steps=20, generator=generator
                 ).images[0]
+            image.save(f'{args.output_dir}/image.jpg')
 
         image_logs.append(
             {"cond": cond, "images": image, "prompt": args.text_prompt}
@@ -1191,14 +1192,14 @@ def main(args):
 
     # We need to initialize the trackers we use, and also store our configuration.
     # The trackers initializes automatically on the main process.
-    if accelerator.is_main_process:
-        tracker_config = dict(vars(args))
+    # if accelerator.is_main_process:
+    #     tracker_config = dict(vars(args))
 
-        # tensorboard cannot handle list types for config
-        tracker_config.pop("validation_prompt")
-        tracker_config.pop("validation_image")
+    #     # tensorboard cannot handle list types for config
+    #     tracker_config.pop("validation_prompt")
+    #     tracker_config.pop("validation_image")
 
-        accelerator.init_trackers(args.tracker_project_name, config=tracker_config)
+    #     accelerator.init_trackers(args.tracker_project_name, config=tracker_config)
 
     # Train!
     # total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
