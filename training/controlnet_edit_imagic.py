@@ -50,6 +50,7 @@ from diffusers import (
 from diffusers.optimization import get_scheduler
 from diffusers.utils import check_min_version, is_wandb_available
 from diffusers.utils.import_utils import is_xformers_available
+from diffusers.utils import load_image
 from huggingface_hub import create_repo, upload_folder
 from packaging import version
 from torchvision import transforms
@@ -554,6 +555,8 @@ def parse_args(input_args=None):
     parser.add_argument("--train_unet", action="store_true")
     parser.add_argument("--load_unet_from_local", action="store_true")
     parser.add_argument("--unet_local_path", type=str, default=None)
+    parser.add_argument("--embedding_optimize_it", type=int, default=500)
+    parser.add_argument("--model_finetune_it", type=int, default=1000)
 
 
     if input_args is not None:
@@ -951,9 +954,19 @@ def main(args):
         )
 
     # Prepare everything with our `accelerator`.
-    controlnet, optimizer = accelerator.prepare(
-        controlnet, optimizer
+    train_dataset = make_train_dataset(args, tokenizer, accelerator)
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset,
+        shuffle=True,
+        collate_fn=collate_fn,
+        batch_size=args.train_batch_size,
+        num_workers=args.dataloader_num_workers,
     )
+    controlnet, optimizer, train_dataloader = accelerator.prepare(
+        controlnet, optimizer, train_dataloader
+    )
+    for step, batch in enumerate(train_dataloader):
+        pass
 
     # For mixed precision training we cast the text_encoder and vae weights to half-precision
     # as these models are only used for inference, keeping weights in full precision is not required.
@@ -969,19 +982,19 @@ def main(args):
     text_encoder.to(accelerator.device, dtype=weight_dtype)
 
     # ----------------------------------- Imagic -------------------------------------------- #
-    train_dataset = make_train_dataset(args, tokenizer, accelerator)
-    init_image = train_dataset["pixel_values"][0].to(dtype=weight_dtype)
-    init_latent = vae.encode(train_dataset["pixel_values"][0].to(dtype=weight_dtype)).latent_dist.sample()
+    init_image = batch["pixel_values"][0].to(dtype=weight_dtype)
+    init_latent = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
     init_latent = init_latent * vae.config.scaling_factor
 
-    orig_emb = text_encoder(train_dataset["input_ids"][0])[0]
+    orig_emb = text_encoder(batch["input_ids"])[0]
     emb = orig_emb.clone()
 
     # 1. Optimize the embedding
     unet.eval()
     emb.requires_grad = True
     lr = 0.001
-    it = 500
+    it = args.embedding_optimize_it
+    # it = 500
     opt = torch.optim.Adam([emb], lr=lr)
     history = []
 
@@ -995,7 +1008,7 @@ def main(args):
         t_enc = t_enc.long()
         z = noise_scheduler.add_noise(init_latent, noise, t_enc)
 
-        controlnet_image = train_dataset["conditioning_pixel_values"][0].to(dtype=weight_dtype)
+        controlnet_image = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
 
         down_block_res_samples, mid_block_res_sample = controlnet(
             z,
@@ -1035,7 +1048,8 @@ def main(args):
     unet.train()
 
     lr = 1e-6
-    it = 1000
+    it = args.model_finetune_it
+    # it = 1000
     opt = torch.optim.Adam(params_to_optimize, lr=lr)
     history = []
 
@@ -1049,7 +1063,7 @@ def main(args):
         t_enc = t_enc.long()
         z = noise_scheduler.add_noise(init_latent, noise, t_enc)
 
-        controlnet_image = train_dataset["conditioning_pixel_values"][0].to(dtype=weight_dtype)
+        controlnet_image = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
 
         down_block_res_samples, mid_block_res_sample = controlnet(
             z,
@@ -1087,6 +1101,7 @@ def main(args):
     # 3. Generate Images    
     logger.info("Running validation... ")
 
+    unet.eval()
     controlnet = accelerator.unwrap_model(controlnet)
 
     pipeline = StableDiffusionControlNetPipeline.from_pretrained(
@@ -1113,6 +1128,7 @@ def main(args):
         generator = torch.Generator(device=accelerator.device).manual_seed(args.seed)
 
     # Interpolate the embedding
+    cond = load_image(args.condition_image_path)
     for alpha in (0.8, 0.9, 1, 1.1):
         new_emb = alpha * orig_emb + (1 - alpha) * emb
 
@@ -1120,7 +1136,7 @@ def main(args):
 
         with torch.autocast("cuda"):
             image = pipeline(
-                    prompt_embeds=new_emb, guidance_scale=1, num_inference_steps=20, generator=generator
+                    image=cond, prompt_embeds=new_emb, guidance_scale=1, num_inference_steps=20, generator=generator
                 ).images[0]
 
         image_logs.append(
