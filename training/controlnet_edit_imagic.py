@@ -1129,16 +1129,15 @@ def main(args):
 
     # Interpolate the embedding
     cond = load_image(args.condition_image_path)
+    image_logs = []
     for alpha in (0.8, 0.9, 1, 1.1):
         new_emb = alpha * orig_emb + (1 - alpha) * emb
-
-        image_logs = []
 
         with torch.autocast("cuda"):
             image = pipeline(
                     image=cond, prompt_embeds=new_emb, guidance_scale=1, num_inference_steps=20, generator=generator
                 ).images[0]
-            image.save(f'{args.output_dir}/image.jpg')
+            image.save(f'{args.output_dir}/image_{alpha}.jpg')
 
         image_logs.append(
             {"cond": cond, "images": image, "prompt": args.text_prompt}
