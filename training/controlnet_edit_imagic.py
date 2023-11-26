@@ -55,7 +55,6 @@ from packaging import version
 from torchvision import transforms
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, PretrainedConfig, Adafactor
-from ldm.models.diffusion.ddim import DDIMSampler
 
 if is_wandb_available():
     import wandb
@@ -933,24 +932,23 @@ def main(args):
         # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
     ]
 
-    # todo: check this optimizer too
-    # # Optimizer creation
-    # if optimizer_class == Adafactor:
-    #     optimizer = Adafactor(
-    #         params_to_optimize,
-    #         scale_parameter=False,
-    #         relative_step=False,
-    #         warmup_init=False,
-    #         lr=args.learning_rate,
-    #     )
-    # else:
-    #     optimizer = optimizer_class(
-    #         params_to_optimize,
-    #         # lr=args.learning_rate,
-    #         betas=(args.adam_beta1, args.adam_beta2),
-    #         weight_decay=args.adam_weight_decay,
-    #         eps=args.adam_epsilon,
-    #     )
+    # Optimizer creation
+    if optimizer_class == Adafactor:
+        optimizer = Adafactor(
+            params_to_optimize,
+            scale_parameter=False,
+            relative_step=False,
+            warmup_init=False,
+            lr=args.learning_rate,
+        )
+    else:
+        optimizer = optimizer_class(
+            params_to_optimize,
+            # lr=args.learning_rate,
+            betas=(args.adam_beta1, args.adam_beta2),
+            weight_decay=args.adam_weight_decay,
+            eps=args.adam_epsilon,
+        )
 
     # Prepare everything with our `accelerator`.
     controlnet, optimizer = accelerator.prepare(
@@ -972,11 +970,11 @@ def main(args):
 
     # ----------------------------------- Imagic -------------------------------------------- #
     train_dataset = make_train_dataset(args, tokenizer, accelerator)
-    init_image = batch["pixel_values"].to(dtype=weight_dtype)
-    init_latent = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
+    init_image = train_dataset["pixel_values"][0].to(dtype=weight_dtype)
+    init_latent = vae.encode(train_dataset["pixel_values"][0].to(dtype=weight_dtype)).latent_dist.sample()
     init_latent = init_latent * vae.config.scaling_factor
 
-    orig_emb = text_encoder(batch["input_ids"])[0]
+    orig_emb = text_encoder(train_dataset["input_ids"][0])[0]
     emb = orig_emb.clone()
 
     # 1. Optimize the embedding
@@ -997,7 +995,7 @@ def main(args):
         t_enc = t_enc.long()
         z = noise_scheduler.add_noise(init_latent, noise, t_enc)
 
-        controlnet_image = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
+        controlnet_image = train_dataset["conditioning_pixel_values"][0].to(dtype=weight_dtype)
 
         down_block_res_samples, mid_block_res_sample = controlnet(
             z,
@@ -1022,7 +1020,7 @@ def main(args):
         if noise_scheduler.config.prediction_type == "epsilon":
             target = noise
         elif noise_scheduler.config.prediction_type == "v_prediction":
-            target = noise_scheduler.get_velocity(latents, noise, timesteps)
+            target = noise_scheduler.get_velocity(init_latent, noise, t_enc)
         else:
             raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
         loss = F.mse_loss(pred_noise.float(), target.float(), reduction="mean")
@@ -1038,8 +1036,7 @@ def main(args):
 
     lr = 1e-6
     it = 1000
-    opt = torch.optim.Adam(model.model.parameters(), lr=lr)
-    criteria = torch.nn.MSELoss()
+    opt = torch.optim.Adam(params_to_optimize, lr=lr)
     history = []
 
     pbar = tqdm(range(it))
@@ -1052,7 +1049,7 @@ def main(args):
         t_enc = t_enc.long()
         z = noise_scheduler.add_noise(init_latent, noise, t_enc)
 
-        controlnet_image = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
+        controlnet_image = train_dataset["conditioning_pixel_values"][0].to(dtype=weight_dtype)
 
         down_block_res_samples, mid_block_res_sample = controlnet(
             z,
@@ -1077,7 +1074,7 @@ def main(args):
         if noise_scheduler.config.prediction_type == "epsilon":
             target = noise
         elif noise_scheduler.config.prediction_type == "v_prediction":
-            target = noise_scheduler.get_velocity(latents, noise, timesteps)
+            target = noise_scheduler.get_velocity(init_latent, noise, t_enc)
         else:
             raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
         loss = F.mse_loss(pred_noise.float(), target.float(), reduction="mean")
@@ -1088,41 +1085,32 @@ def main(args):
         opt.step()
 
     # 3. Generate Images    
-    scale = 1.0
-    ddim_steps = 45
-    ddim_eta = 0.0
-    torch.manual_seed(0)
+    logger.info("Running validation... ")
 
-    sampler = DDIMSampler(model)
-    @torch.no_grad()
-    def sample_model(model, sampler, c, h, w, ddim_steps, scale, ddim_eta, start_code=None, n_samples=1):
-        """Sample the model"""
-        uc = None
-        if scale != 1.0:
-            uc = model.get_learned_conditioning(n_samples * [""])
+    controlnet = accelerator.unwrap_model(controlnet)
 
-        shape = [4, h // 8, w // 8]
-        samples_ddim, _ = sampler.sample(S=ddim_steps,
-                                        conditioning=c,
-                                        batch_size=n_samples,
-                                        shape=shape,
-                                        verbose=False,
-                                        start_code=start_code,
-                                        unconditional_guidance_scale=scale,
-                                        unconditional_conditioning=uc,
-                                        eta=ddim_eta,
-                                        )
-        return samples_ddim
+    pipeline = StableDiffusionControlNetPipeline.from_pretrained(
+        args.pretrained_model_name_or_path,
+        vae=vae,
+        text_encoder=text_encoder,
+        tokenizer=tokenizer,
+        unet=unet,
+        controlnet=controlnet,
+        safety_checker=None,
+        revision=args.revision,
+        torch_dtype=weight_dtype,
+    )
+    pipeline.scheduler = UniPCMultistepScheduler.from_config(pipeline.scheduler.config)
+    pipeline = pipeline.to(accelerator.device)
+    pipeline.set_progress_bar_config(disable=True)
 
-    def decode_to_im(samples, n_samples=1, nrow=1):
-        """Decode a latent and return PIL image"""
-        samples = vae.decode(samples)
-        ims = torch.clamp((samples + 1.0) / 2.0, min=0.0, max=1.0)
-        x_sample = 255. * rearrange(ims.cpu().numpy(), '(n1 n2) c h w -> (n1 h) (n2 w) c', n1=n_samples//nrow, n2=nrow)
-        return Image.fromarray(x_sample.astype(np.uint8))
+    if args.enable_xformers_memory_efficient_attention:
+        pipeline.enable_xformers_memory_efficient_attention()
 
-    quick_sample = lambda x, s, code: decode_to_im(sample_model(model, sampler, x, h, w, ddim_steps, s, ddim_eta, start_code=code))
-    start_code = torch.randn_like(init_latent)
+    if args.seed is None:
+        generator = None
+    else:
+        generator = torch.Generator(device=accelerator.device).manual_seed(args.seed)
 
     # Interpolate the embedding
     for alpha in (0.8, 0.9, 1, 1.1):
@@ -1130,9 +1118,10 @@ def main(args):
 
         image_logs = []
 
-        for _ in range(args.num_validation_images):
         with torch.autocast("cuda"):
-            image = quick_sample(new_emb, scale, start_code)
+            image = pipeline(
+                    prompt_embeds=new_emb, guidance_scale=1, num_inference_steps=20, generator=generator
+                ).images[0]
 
         image_logs.append(
             {"validation_image": validation_image, "images": image, "validation_prompt": validation_prompt}
