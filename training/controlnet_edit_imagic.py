@@ -1140,38 +1140,38 @@ def main(args):
                 ).images[0]
 
         image_logs.append(
-            {"validation_image": validation_image, "images": image, "validation_prompt": validation_prompt}
+            {"cond": cond, "images": image, "prompt": args.text_prompt}
         )
 
     for tracker in accelerator.trackers:
         if tracker.name == "tensorboard":
             for log in image_logs:
                 images = log["images"]
-                validation_prompt = log["validation_prompt"]
-                validation_image = log["validation_image"]
+                prompt = log["prompt"]
+                cond = log["cond"]
 
                 formatted_images = []
 
-                formatted_images.append(np.asarray(validation_image))
+                formatted_images.append(np.asarray(cond))
 
                 for image in images:
                     formatted_images.append(np.asarray(image))
 
                 formatted_images = np.stack(formatted_images)
 
-                tracker.writer.add_images(validation_prompt, formatted_images, step, dataformats="NHWC")
+                tracker.writer.add_images(prompt, formatted_images, step, dataformats="NHWC")
         elif tracker.name == "wandb":
             formatted_images = []
 
             for log in image_logs:
                 images = log["images"]
-                validation_prompt = log["validation_prompt"]
-                validation_image = log["validation_image"]
+                prompt = log["prompt"]
+                cond = log["cond"]
 
-                formatted_images.append(wandb.Image(validation_image, caption="Controlnet conditioning"))
+                formatted_images.append(wandb.Image(cond, caption="Controlnet conditioning"))
 
                 for image in images:
-                    image = wandb.Image(image, caption=validation_prompt)
+                    image = wandb.Image(image, caption=prompt)
                     formatted_images.append(image)
 
             tracker.log({"validation": formatted_images})
