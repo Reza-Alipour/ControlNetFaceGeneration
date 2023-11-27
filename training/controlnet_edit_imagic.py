@@ -1047,7 +1047,7 @@ def main(args):
     emb.requires_grad = False
     unet.train()
 
-    lr = 1e-6
+    lr = 5e-5
     it = args.model_finetune_it
     # it = 1000
     opt = torch.optim.Adam(params_to_optimize, lr=lr)
@@ -1097,6 +1097,14 @@ def main(args):
         pbar.set_postfix({"loss": loss.item()})
         history.append(loss.item())
         opt.step()
+
+    unet.eval()
+    cond = load_image(args.condition_image_path)
+    with torch.autocast("cuda"):
+        image = pipeline(
+                image=cond, prompt_embeds=emb, num_inference_steps=20, generator=generator
+            ).images[0]
+        image.save(f'{args.output_dir}/image_reconstruct.jpg')
 
     # 3. Generate Images    
     logger.info("Running validation... ")
