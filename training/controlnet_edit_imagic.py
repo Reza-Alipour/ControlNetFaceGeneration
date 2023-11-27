@@ -967,8 +967,8 @@ def main(args):
         batch_size=args.train_batch_size,
         num_workers=args.dataloader_num_workers,
     )
-    controlnet, optimizer, train_dataloader = accelerator.prepare(
-        controlnet, optimizer, train_dataloader
+    controlnet, train_dataloader = accelerator.prepare(
+        controlnet, train_dataloader
     )
     for step, batch in enumerate(train_dataloader):
         pass
