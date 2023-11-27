@@ -925,20 +925,20 @@ def main(args):
     else:
         optimizer_class = torch.optim.AdamW
 
-    # params = []
-    # params_lowlr = []
-    # for name, param in unet.named_parameters():
-    #     if (name.find('attn1') > 0 or name.find('attn2') > 0) and (name.find('to_out') > 0) and (
-    #             name.find('attn1') > 0 or (name.find('attn2') > 0 and name.find('.weight') > 0)):
-    #         params.append(param)
-    #     else:
-    #         params_lowlr.append(param)
-    #         param.requires_grad = False
+    params = []
+    params_lowlr = []
+    for name, param in unet.named_parameters():
+        if (name.find('attn1') > 0 or name.find('attn2') > 0) and (name.find('to_out') > 0) and (
+                name.find('attn1') > 0 or (name.find('attn2') > 0 and name.find('.weight') > 0)):
+            params.append(param)
+        else:
+            params_lowlr.append(param)
+            param.requires_grad = False
 
-    # params_to_optimize = [
-    #     {'params': params, 'lr': args.learning_rate},
-    #     # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
-    # ]
+    params_to_optimize = [
+        {'params': params, 'lr': args.learning_rate},
+        # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
+    ]
 
     # # Optimizer creation
     # if optimizer_class == Adafactor:
@@ -1057,7 +1057,7 @@ def main(args):
     lr = 5e-5
     it = args.model_finetune_it
     # it = 1000
-    opt = torch.optim.Adam(unet.parameters(), lr=lr)
+    opt = torch.optim.Adam(params_to_optimize, lr=lr)
     history = []
 
     pbar = tqdm(range(it))
@@ -1151,7 +1151,7 @@ def main(args):
 
         with torch.autocast("cuda"):
             image = pipeline(
-                    image=cond, prompt_embeds=new_emb, guidance_scale=1, num_inference_steps=20, generator=generator
+                    image=cond, prompt_embeds=new_emb, num_inference_steps=20, generator=generator
                 ).images[0]
             image.save(f'{args.output_dir}/image_{alpha}.jpg')
 
