@@ -848,6 +848,11 @@ def main(args):
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
     controlnet.requires_grad_(False)
+    unet.requires_grad_(False)
+    vae.eval()
+    text_encoder.eval()
+    controlnet.eval()
+    unet.eval()
 
     # if args.train_text_encoder:
     #     text_encoder.requires_grad_(True)
@@ -860,11 +865,11 @@ def main(args):
     #     controlnet.train()
     # else:
     #     controlnet.requires_grad_(False)
-    if args.train_unet:
-        unet.requires_grad_(True)
-        unet.train()
-    else:
-        unet.requires_grad_(False)
+    # if args.train_unet:
+    #     unet.requires_grad_(True)
+    #     unet.train()
+    # else:
+    #     unet.requires_grad_(False)
 
 
     if args.enable_xformers_memory_efficient_attention:
@@ -920,38 +925,38 @@ def main(args):
     else:
         optimizer_class = torch.optim.AdamW
 
-    params = []
-    params_lowlr = []
-    for name, param in unet.named_parameters():
-        if (name.find('attn1') > 0 or name.find('attn2') > 0) and (name.find('to_out') > 0) and (
-                name.find('attn1') > 0 or (name.find('attn2') > 0 and name.find('.weight') > 0)):
-            params.append(param)
-        else:
-            params_lowlr.append(param)
-            param.requires_grad = False
+    # params = []
+    # params_lowlr = []
+    # for name, param in unet.named_parameters():
+    #     if (name.find('attn1') > 0 or name.find('attn2') > 0) and (name.find('to_out') > 0) and (
+    #             name.find('attn1') > 0 or (name.find('attn2') > 0 and name.find('.weight') > 0)):
+    #         params.append(param)
+    #     else:
+    #         params_lowlr.append(param)
+    #         param.requires_grad = False
 
-    params_to_optimize = [
-        {'params': params, 'lr': args.learning_rate},
-        # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
-    ]
+    # params_to_optimize = [
+    #     {'params': params, 'lr': args.learning_rate},
+    #     # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
+    # ]
 
-    # Optimizer creation
-    if optimizer_class == Adafactor:
-        optimizer = Adafactor(
-            params_to_optimize,
-            scale_parameter=False,
-            relative_step=False,
-            warmup_init=False,
-            lr=args.learning_rate,
-        )
-    else:
-        optimizer = optimizer_class(
-            params_to_optimize,
-            # lr=args.learning_rate,
-            betas=(args.adam_beta1, args.adam_beta2),
-            weight_decay=args.adam_weight_decay,
-            eps=args.adam_epsilon,
-        )
+    # # Optimizer creation
+    # if optimizer_class == Adafactor:
+    #     optimizer = Adafactor(
+    #         params_to_optimize,
+    #         scale_parameter=False,
+    #         relative_step=False,
+    #         warmup_init=False,
+    #         lr=args.learning_rate,
+    #     )
+    # else:
+    #     optimizer = optimizer_class(
+    #         params_to_optimize,
+    #         # lr=args.learning_rate,
+    #         betas=(args.adam_beta1, args.adam_beta2),
+    #         weight_decay=args.adam_weight_decay,
+    #         eps=args.adam_epsilon,
+    #     )
 
     # Prepare everything with our `accelerator`.
     train_dataset = make_train_dataset(args, tokenizer, accelerator)
@@ -1042,15 +1047,17 @@ def main(args):
         pbar.set_postfix({"loss": loss.item()})
         history.append(loss.item())
         opt.step()
+        opt.zero_grad()
 
     # 2. Finetune the model
     emb.requires_grad = False
+    unet.requires_grad_(True)
     unet.train()
 
     lr = 5e-5
     it = args.model_finetune_it
     # it = 1000
-    opt = torch.optim.Adam(params_to_optimize, lr=lr)
+    opt = torch.optim.Adam(unet.parameters(), lr=lr)
     history = []
 
     pbar = tqdm(range(it))
@@ -1097,14 +1104,7 @@ def main(args):
         pbar.set_postfix({"loss": loss.item()})
         history.append(loss.item())
         opt.step()
-
-    unet.eval()
-    cond = load_image(args.condition_image_path)
-    with torch.autocast("cuda"):
-        image = pipeline(
-                image=cond, prompt_embeds=emb, num_inference_steps=20, generator=generator
-            ).images[0]
-        image.save(f'{args.output_dir}/image_reconstruct.jpg')
+        opt.zero_grad()
 
     # 3. Generate Images    
     logger.info("Running validation... ")
@@ -1135,8 +1135,16 @@ def main(args):
     else:
         generator = torch.Generator(device=accelerator.device).manual_seed(args.seed)
 
-    # Interpolate the embedding
+    # Reconstruct original image
+    unet.eval()
     cond = load_image(args.condition_image_path)
+    with torch.autocast("cuda"):
+        image = pipeline(
+                image=cond, prompt_embeds=emb, num_inference_steps=20, generator=generator
+            ).images[0]
+        image.save(f'{args.output_dir}/image_reconstruct.jpg')
+
+    # Interpolate the embedding
     image_logs = []
     for alpha in (0.8, 0.9, 1, 1.1):
         new_emb = alpha * orig_emb + (1 - alpha) * emb
