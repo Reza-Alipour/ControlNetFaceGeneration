@@ -32,7 +32,7 @@ from typing import Optional
 import evaluate
 import numpy as np
 import torch
-from datasets import load_dataset
+from datasets import load_dataset, DatasetDict
 from huggingface_hub import hf_hub_download
 from PIL import Image
 from torch import nn
@@ -351,6 +351,11 @@ def main():
     unnecessary_columns = set(dataset["train"].column_names) - {data_args.image_column, data_args.label_column}
     dataset = dataset.remove_columns(list(unnecessary_columns))
     dataset = dataset.rename_columns({data_args.image_column: "image", data_args.label_column: "label"})
+    if "test" in dataset.keys() and "validation" not in dataset.keys():
+        dataset = DatasetDict({
+            "train": dataset["train"],
+            "validation": dataset["test"]
+        })
 
 
     # Rename column names to standardized names (only "image" and "label" need to be present)
