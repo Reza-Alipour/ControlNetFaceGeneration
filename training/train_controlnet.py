@@ -548,6 +548,8 @@ def parse_args(input_args=None):
             " more information see https://huggingface.co/docs/accelerate/v0.17.0/en/package_reference/accelerator#accelerate.Accelerator"
         ),
     )
+    parser.add_argument("--controlnet_load_revision", type=str, default=None)
+    parser.add_argument("--controlnet_save_revision", type=str, default=None)
 
     if input_args is not None:
         args = parser.parse_args(input_args)
@@ -796,7 +798,8 @@ def main(args):
 
     if args.controlnet_model_name_or_path:
         logger.info("Loading existing controlnet weights")
-        controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path, token=args.hub_read_token)
+        controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path,
+                                                     revision=args.controlnet_load_revision, token=args.hub_read_token)
     else:
         logger.info("Initializing controlnet weights from unet")
         controlnet = ControlNetModel.from_unet(unet)
@@ -1147,6 +1150,7 @@ def main(args):
             upload_folder(
                 repo_id=repo_id,
                 token=args.hub_token,
+                revision=args.controlnet_save_revision,
                 folder_path=args.output_dir,
                 commit_message="End of training",
                 ignore_patterns=["step_*", "epoch_*"],
