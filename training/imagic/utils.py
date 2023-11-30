@@ -180,7 +180,7 @@ def parse_args(input_args=None):
     )
     parser.add_argument(
         "--gradient_checkpointing",
-        action="store_false",
+        action="store_true",
         help="Whether or not to use gradient checkpointing to save memory at the expense of slower backward pass.",
     )
     parser.add_argument(
@@ -279,7 +279,7 @@ def parse_args(input_args=None):
         ),
     )
     parser.add_argument(
-        "--enable_xformers_memory_efficient_attention", action="store_false", help="Whether or not to use xformers."
+        "--enable_xformers_memory_efficient_attention", action="store_true", help="Whether or not to use xformers."
     )
     parser.add_argument(
         "--set_grads_to_none",
@@ -316,7 +316,7 @@ def parse_args(input_args=None):
             " must exist to provide the captions for the images. Ignored if `dataset_name` is specified."
         ),
     )
-    parser.add_argument("--single_image_tune", action="store_false")
+    parser.add_argument("--single_image_tune", action="store_true")
     parser.add_argument("--image_path", type=str, default='img.jpg')
     parser.add_argument("--condition_image_path", type=str, default='cond.jpg')
     parser.add_argument("--mask_path", type=str, default='cond.jpg')
@@ -401,7 +401,7 @@ def parse_args(input_args=None):
     )
     parser.add_argument("--train_text_encoder", action="store_true")
     parser.add_argument("--train_controlnet", action="store_true")
-    parser.add_argument("--train_unet", action="store_false")
+    parser.add_argument("--train_unet", action="store_true")
     parser.add_argument("--load_unet_from_local", action="store_true")
     parser.add_argument("--unet_local_path", type=str, default=None)
 
