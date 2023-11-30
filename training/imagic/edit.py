@@ -339,7 +339,7 @@ def main(args):
             logs = {"loss": loss.detach().item()}
             global_step += 1
             accelerator.log(logs, step=global_step)
-            pbar.set_postfix({"loss": loss.item()})
+            pbar.set_postfix({"loss_embedding": loss.item()})
             history.append(loss.item())
             opt.step()
             opt.zero_grad()
@@ -404,7 +404,7 @@ def main(args):
             loss.backward()
             global_step += 1
             accelerator.log(logs, step=global_step)
-            pbar.set_postfix({"loss": loss.item()})
+            pbar.set_postfix({"loss_finetune": loss.item()})
             history.append(loss.item())
             opt.step()
             opt.zero_grad()
@@ -473,6 +473,19 @@ def main(args):
                 image_logs.append(
                     {"image": image, "mask": cond, "name": f'{num_inference_steps}_{alpha}'}
                 )
+
+    for tracker in accelerator.trackers:
+        formatted_images = []
+
+        for log in image_logs:
+            image = log["image"]
+            mask = log["mask"]
+            name = log["name"]
+
+            formatted_images.append(wandb.Image(image, caption=name))
+            formatted_images.append(wandb.Image(mask, caption=name))
+
+        tracker.log({"results": formatted_images})
 
     # Create the pipeline using using the trained modules and save it.
     logger.info('Saving the unet model.')
