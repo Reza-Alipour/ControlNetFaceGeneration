@@ -335,6 +335,7 @@ def parse_args():
     parser.add_argument("--tokenizer_subfolder", default="tokenizer", type=str)
     parser.add_argument("--transformer_subfolder", default="transformer", type=str)
     parser.add_argument("--tokenizer_max_length", default=77, type=int)
+    parser.add_argument("--dataset_name", default="reza-alipour/CelebA-HQ", type=str)
 
     args = parser.parse_args()
 
