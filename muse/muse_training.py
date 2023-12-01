@@ -535,7 +535,7 @@ def main(args):
         dataset_name=args.dataset_name,
         size=args.resolution,
         center_crop=args.center_crop,
-        use_auth_token=args.read_token
+        token=args.read_token
     )
 
     train_dataloader = DataLoader(
