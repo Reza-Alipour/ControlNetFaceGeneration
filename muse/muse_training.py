@@ -70,7 +70,7 @@ class AdapterDataset(Dataset):
     ):
         self.size = size
         self.center_crop = center_crop
-        self.ds = load_dataset(dataset_name)
+        self.ds = load_dataset(dataset_name).shuffle(seeds=1337)
         self.num_instance_images = len(self.ds['train'])
         self._length = self.num_instance_images
 
