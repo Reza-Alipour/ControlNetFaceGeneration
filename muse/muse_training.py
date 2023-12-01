@@ -329,6 +329,11 @@ def parse_args():
     parser.add_argument("--read_token", default=None, type=str)
     parser.add_argument("--write_token", default=None, type=str)
     parser.add_argument("--write_revision", default=None, type=str)
+    parser.add_argument("--text_encoder_type", default="clip", type=str)
+    parser.add_argument("--vae_subfolder", default="vqvae", type=str)
+    parser.add_argument("--text_encoder_subfolder", default="text_encoder", type=str)
+    parser.add_argument("--tokenizer_subfolder", default="tokenizer", type=str)
+    parser.add_argument("--transformer_subfolder", default="transformer", type=str)
 
     args = parser.parse_args()
 
@@ -398,13 +403,19 @@ def main(args):
         else:
             accelerator.print(f"Resuming from checkpoint {resume_from_checkpoint}")
     text_encoder = text_encoder_class.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision, variant=args.variant
+        args.pretrained_model_name_or_path,
+        subfolder=args.text_encoder_subfolder,
+        revision=args.revision,
+        variant=args.variant
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="tokenizer", revision=args.revision, variant=args.variant
+        args.pretrained_model_name_or_path,
+        subfolder=args.tokenizer_subfolder,
+        revision=args.revision,
+        variant=args.variant
     )
     vq_model = VQModel.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="vqvae", revision=args.revision, variant=args.variant
+        args.pretrained_model_name_or_path, subfolder=args.vqvae_subfolder, revision=args.revision, variant=args.variant
     )
 
     text_encoder.requires_grad_(False)
@@ -412,7 +423,10 @@ def main(args):
 
     if args.is_lora:
         model = UVit2DModel.from_pretrained(
-            args.pretrained_model_name_or_path, subfolder="transformer", revision=args.revision, variant=args.variant
+            args.pretrained_model_name_or_path,
+            subfolder=args.transformer_subfolder,
+            revision=args.revision,
+            variant=args.variant
         )
 
         if resume_from_checkpoint is not None:
