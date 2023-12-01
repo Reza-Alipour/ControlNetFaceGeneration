@@ -185,7 +185,7 @@ def parse_args():
         default=None,
         help="Total number of training steps to perform.  If provided, overrides num_train_epochs.",
     )
-    parser.add_argument("--epoch", type=int, default=None)
+    parser.add_argument("--epochs", type=int, default=None)
     parser.add_argument(
         "--checkpointing_steps",
         type=int,
