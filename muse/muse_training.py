@@ -575,15 +575,6 @@ def main(args):
         empty_embeds = outputs.hidden_states[-2]
         empty_clip_embeds = outputs[0]
 
-        instance_prompt_input_ids = tokenizer(
-            args.instance_prompt,
-            truncation=True,
-            padding="max_length",
-            max_length=77,
-            return_tensors="pt",
-        ).input_ids.to(accelerator.device)
-        outputs = text_encoder(instance_prompt_input_ids, return_dict=True, output_hidden_states=True)
-
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(train_dataloader.num_batches / args.gradient_accumulation_steps)
     # Afterwards we recalculate our number of training epochs.
