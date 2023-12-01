@@ -789,7 +789,7 @@ def main(args):
                 global_step += 1
 
             # Stop training if max steps is reached
-            if global_step >= args.max_train_steps:
+            if args.max_train_steps is not None and global_step >= args.max_train_steps:
                 break
         # End for
 
