@@ -334,6 +334,7 @@ def parse_args():
     parser.add_argument("--text_encoder_subfolder", default="text_encoder", type=str)
     parser.add_argument("--tokenizer_subfolder", default="tokenizer", type=str)
     parser.add_argument("--transformer_subfolder", default="transformer", type=str)
+    parser.add_argument("--tokenizer_max_length", default=77, type=int)
 
     args = parser.parse_args()
 
@@ -609,7 +610,7 @@ def main(args):
                     captions,
                     truncation=True,
                     padding="max_length",
-                    max_length=77,
+                    max_length=args.tokenizer_max_length,
                     return_tensors="pt",
                 )
                 caption_ids = tokenized_captions.input_ids.to(accelerator.device, non_blocking=True)
