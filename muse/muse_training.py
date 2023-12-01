@@ -446,7 +446,7 @@ def main(args):
         else:
             model = UVit2DModel.from_pretrained(
                 args.pretrained_model_name_or_path,
-                subfolder="transformer",
+                subfolder=args.transformer_subfolder,
                 revision=args.revision,
                 variant=args.variant,
             )
