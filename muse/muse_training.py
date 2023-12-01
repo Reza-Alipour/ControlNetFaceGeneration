@@ -596,7 +596,7 @@ def main(args):
         for batch in train_dataloader:
             with torch.no_grad():
                 pixel_values = batch["image"].to(accelerator.device, non_blocking=True)
-                captions = batch["caption_ids"]
+                captions = batch["caption"]
                 tokenized_captions = tokenizer(
                     captions,
                     truncation=True,
