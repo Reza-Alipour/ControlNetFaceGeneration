@@ -47,7 +47,7 @@ from torch.utils.data import DataLoader, Dataset, default_collate
 from torchvision import transforms
 from transformers import (
     CLIPTextModelWithProjection,
-    AutoTokenizer,
+    AutoTokenizer, Adafactor,
 )
 
 if is_wandb_available():
@@ -324,6 +324,7 @@ def parse_args():
     parser.add_argument("--transformer_subfolder", default="transformer", type=str)
     parser.add_argument("--tokenizer_max_length", default=77, type=int)
     parser.add_argument("--dataset_name", default="reza-alipour/CelebA-HQ", type=str)
+    parser.add_argument("--use_adafactor", action='store_true', default=False)
 
     args = parser.parse_args()
 
@@ -480,38 +481,48 @@ def main(args):
                 args.learning_rate * args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
         )
 
-    if args.use_8bit_adam:
-        try:
-            import bitsandbytes as bnb
-        except ImportError:
-            raise ImportError(
-                "Please install bitsandbytes to use 8-bit Adam. You can do so by running `pip install bitsandbytes`"
-            )
-
-        optimizer_cls = bnb.optim.AdamW8bit
+    if args.use_adafactor:
+        optimizer = Adafactor(
+            model.parameters(),
+            scale_parameter=False,
+            relative_step=False,
+            warmup_init=False,
+            clip_threshold=0.5,
+            lr=args.learning_rate
+        )
     else:
-        optimizer_cls = torch.optim.AdamW
+        if args.use_8bit_adam:
+            try:
+                import bitsandbytes as bnb
+            except ImportError:
+                raise ImportError(
+                    "Please install bitsandbytes to use 8-bit Adam. You can do so by running `pip install bitsandbytes`"
+                )
 
-    # no decay on bias and layernorm and embedding
-    no_decay = ["bias", "layer_norm.weight", "mlm_ln.weight", "embeddings.weight"]
-    optimizer_grouped_parameters = [
-        {
-            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
-            "weight_decay": args.adam_weight_decay,
-        },
-        {
-            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
-            "weight_decay": 0.0,
-        },
-    ]
+            optimizer_cls = bnb.optim.AdamW8bit
+        else:
+            optimizer_cls = torch.optim.AdamW
 
-    optimizer = optimizer_cls(
-        optimizer_grouped_parameters,
-        lr=args.learning_rate,
-        betas=(args.adam_beta1, args.adam_beta2),
-        weight_decay=args.adam_weight_decay,
-        eps=args.adam_epsilon,
-    )
+        # no decay on bias and layernorm and embedding
+        no_decay = ["bias", "layer_norm.weight", "mlm_ln.weight", "embeddings.weight"]
+        optimizer_grouped_parameters = [
+            {
+                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+                "weight_decay": args.adam_weight_decay,
+            },
+            {
+                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+                "weight_decay": 0.0,
+            },
+        ]
+
+        optimizer = optimizer_cls(
+            optimizer_grouped_parameters,
+            lr=args.learning_rate,
+            betas=(args.adam_beta1, args.adam_beta2),
+            weight_decay=args.adam_weight_decay,
+            eps=args.adam_epsilon,
+        )
 
     ##################################
     # DATLOADER and LR-SCHEDULER     #
