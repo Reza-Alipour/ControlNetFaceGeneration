@@ -67,10 +67,11 @@ class AdapterDataset(Dataset):
             dataset_name,
             size=512,
             center_crop=False,
+            use_auth_token=False
     ):
         self.size = size
         self.center_crop = center_crop
-        self.ds = load_dataset(dataset_name).shuffle(seeds=1337)
+        self.ds = load_dataset(dataset_name, use_auth_token=use_auth_token).shuffle(seeds=1337)
         self.num_instance_images = len(self.ds['train'])
         self._length = self.num_instance_images
 
@@ -523,6 +524,7 @@ def main(args):
         dataset_name=args.dataset_name,
         size=args.resolution,
         center_crop=args.center_crop,
+        use_auth_token=True if args.read_token is not None else False
     )
 
     train_dataloader = DataLoader(
