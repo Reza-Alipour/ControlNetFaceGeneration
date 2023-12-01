@@ -404,7 +404,7 @@ def main(args):
         variant=args.variant
     )
     vq_model = VQModel.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder=args.vqvae_subfolder, revision=args.revision, variant=args.variant
+        args.pretrained_model_name_or_path, subfolder=args.vae_subfolder, revision=args.revision, variant=args.variant
     )
 
     text_encoder.requires_grad_(False)
