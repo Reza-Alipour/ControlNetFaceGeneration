@@ -276,7 +276,7 @@ def main(args):
         init_latent = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
         init_latent = init_latent * vae.config.scaling_factor
 
-        orig_emb = text_encoder(batch["input_ids"])[0]
+        orig_emb = text_encoder(batch["input_ids"], attention_mask=batch["attention_mask"])[0]
         emb = orig_emb.clone()
         torch.save(orig_emb, os.path.join(args.output_dir, 'orig_emb.pt'))
         torch.save(emb, os.path.join(args.output_dir, 'emb.pt'))

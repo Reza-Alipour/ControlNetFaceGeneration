@@ -525,7 +525,8 @@ def make_train_dataset(args, tokenizer, accelerator):
 
     def tokenize_captions(examples, is_train=True):
         captions = []
-        for caption in examples[caption_column]:
+        cpl = caption_column if random.randint(0, 1) == 0 else 'captions'
+        for caption in examples[cpl]:
             if random.random() < args.proportion_empty_prompts:
                 captions.append("")
             elif isinstance(caption, str):
@@ -535,12 +536,12 @@ def make_train_dataset(args, tokenizer, accelerator):
                 captions.append(random.choice(caption) if is_train else caption[0])
             else:
                 raise ValueError(
-                    f"Caption column `{caption_column}` should contain either strings or lists of strings."
+                    f"Caption column `{cpl}` should contain either strings or lists of strings."
                 )
         inputs = tokenizer(
             captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
         )
-        return inputs.input_ids
+        return inputs.input_ids, inputs.attention_mask
 
     image_transforms = transforms.Compose(
         [
@@ -568,7 +569,9 @@ def make_train_dataset(args, tokenizer, accelerator):
 
         examples["pixel_values"] = images
         examples["conditioning_pixel_values"] = conditioning_images
-        examples["input_ids"] = tokenize_captions(examples)
+        input_ids, attention_mask = tokenize_captions(examples)
+        examples["input_ids"] = input_ids
+        examples["attention_mask"] = attention_mask
 
         return examples
 
@@ -589,9 +592,11 @@ def collate_fn(examples):
     conditioning_pixel_values = conditioning_pixel_values.to(memory_format=torch.contiguous_format).float()
 
     input_ids = torch.stack([example["input_ids"] for example in examples])
+    attention_mask = torch.stack([example["attention_mask"] for example in examples])
 
     return {
         "pixel_values": pixel_values,
         "conditioning_pixel_values": conditioning_pixel_values,
         "input_ids": input_ids,
+        "attention_mask": attention_mask,
     }
