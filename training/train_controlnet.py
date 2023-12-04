@@ -663,7 +663,7 @@ def make_train_dataset(args, tokenizer, accelerator):
         cpl = caption_column if random.randint(0, 1) == 0 else 'captions'
         for caption in examples[cpl]:
             if random.random() < args.proportion_empty_prompts:
-                captions.append("")
+                captions.append("High quality face image")
             elif isinstance(caption, str):
                 captions.append(caption)
             elif isinstance(caption, (list, np.ndarray)):
