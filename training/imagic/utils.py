@@ -415,6 +415,8 @@ def parse_args(input_args=None):
     parser.add_argument("--controlnet_load_revision", type=str, default=None)
     parser.add_argument("--controlnet_save_revision", type=str, default=None)
 
+    parser.add_argument("--unet_layer", type=str, default='2and3')
+
 
     if input_args is not None:
         args = parser.parse_args(input_args)

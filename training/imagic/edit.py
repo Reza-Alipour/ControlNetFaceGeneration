@@ -227,10 +227,31 @@ def main(args):
         if(name.startswith('up_blocks')):
             params.append(param)
 
-    params_to_optimize = [
-        {'params': params[154:], 'lr': args.learning_rate},
-        # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
-    ]
+    if args.unet_layer == 'only1':
+        params_to_optimize = [
+            {'params': params[:154], 'lr': args.learning_rate},
+            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
+        ]
+    elif args.unet_layer == 'only2':
+        params_to_optimize = [
+            {'params': params[154:270], 'lr': args.learning_rate},
+            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
+        ]
+    elif args.unet_layer == 'only3':
+        params_to_optimize = [
+            {'params': params[270:], 'lr': args.learning_rate},
+            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
+        ]
+    elif args.unet_layer == '1and2':
+        params_to_optimize = [
+            {'params': params[:270], 'lr': args.learning_rate},
+            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
+        ]
+    elif args.unet_layer == '2and3':
+        params_to_optimize = [
+            {'params': params[154:], 'lr': args.learning_rate},
+            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
+        ]
 
     train_dataset = make_train_dataset(args, tokenizer, accelerator)
     train_dataloader = torch.utils.data.DataLoader(
@@ -293,7 +314,7 @@ def main(args):
         pbar = tqdm(
             range(it),
             initial=0,
-            desc="Steps",
+            desc="Optimize Steps",
             disable=not accelerator.is_local_main_process,
         )
         global_step = 0
@@ -338,10 +359,10 @@ def main(args):
             loss = F.mse_loss(pred_noise.float(), target.float(), reduction="mean")
             
             loss.backward()
-            logs = {"loss": loss.detach().item()}
+            logs = {"embedding/loss": loss.detach().item()}
             global_step += 1
             accelerator.log(logs, step=global_step)
-            pbar.set_postfix({"embedding/loss": loss.item()})
+            pbar.set_postfix({"loss": loss.item()})
             history.append(loss.item())
             opt.step()
             opt.zero_grad()
@@ -360,7 +381,7 @@ def main(args):
         pbar = tqdm(
             range(it),
             initial=0,
-            desc="Steps",
+            desc="Finetune Steps",
             disable=not accelerator.is_local_main_process,
         )
         global_step = 0
