@@ -230,27 +230,22 @@ def main(args):
     if args.unet_layer == 'only1':
         params_to_optimize = [
             {'params': params[:154], 'lr': args.learning_rate},
-            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
         ]
     elif args.unet_layer == 'only2':
         params_to_optimize = [
             {'params': params[154:270], 'lr': args.learning_rate},
-            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
         ]
     elif args.unet_layer == 'only3':
         params_to_optimize = [
             {'params': params[270:], 'lr': args.learning_rate},
-            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
         ]
     elif args.unet_layer == '1and2':
         params_to_optimize = [
             {'params': params[:270], 'lr': args.learning_rate},
-            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
         ]
     elif args.unet_layer == '2and3':
         params_to_optimize = [
             {'params': params[154:], 'lr': args.learning_rate},
-            # {'params': params_lowlr, 'lr': args.learning_rate * 0.001}
         ]
 
     train_dataset = make_train_dataset(args, tokenizer, accelerator)
@@ -359,7 +354,7 @@ def main(args):
             loss = F.mse_loss(pred_noise.float(), target.float(), reduction="mean")
             
             loss.backward()
-            logs = {"embedding/loss": loss.detach().item()}
+            logs = {"embedding/loss": loss.detach().item(), "optimize_step": i}
             global_step += 1
             accelerator.log(logs, step=global_step)
             pbar.set_postfix({"loss": loss.item()})
@@ -425,7 +420,7 @@ def main(args):
             loss = F.mse_loss(pred_noise.float(), target.float(), reduction="mean")
             
             loss.backward()
-            logs = {"finetune/loss": loss.detach().item()}
+            logs = {"loss": loss.detach().item(), "finetune_step": i}
             global_step += 1
             accelerator.log(logs, step=global_step)
             pbar.set_postfix({"loss": loss.item()})
