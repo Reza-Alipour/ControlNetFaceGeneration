@@ -227,23 +227,23 @@ def main(args):
         if(name.startswith('up_blocks')):
             params.append(param)
 
-    if args.unet_layer == 'only1':
+    if args.unet_layer == 'only1': # 116 layers
         params_to_optimize = [
-            {'params': params[:154], 'lr': args.learning_rate},
+            {'params': params[38:154], 'lr': args.learning_rate},
         ]
-    elif args.unet_layer == 'only2':
+    elif args.unet_layer == 'only2': # 116 layers
         params_to_optimize = [
             {'params': params[154:270], 'lr': args.learning_rate},
         ]
-    elif args.unet_layer == 'only3':
+    elif args.unet_layer == 'only3': # 114 layers
         params_to_optimize = [
             {'params': params[270:], 'lr': args.learning_rate},
         ]
-    elif args.unet_layer == '1and2':
+    elif args.unet_layer == '1and2': # 232 layers
         params_to_optimize = [
-            {'params': params[:270], 'lr': args.learning_rate},
+            {'params': params[38:270], 'lr': args.learning_rate},
         ]
-    elif args.unet_layer == '2and3':
+    elif args.unet_layer == '2and3': # 230 layers
         params_to_optimize = [
             {'params': params[154:], 'lr': args.learning_rate},
         ]
