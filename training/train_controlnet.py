@@ -102,7 +102,7 @@ def log_validation(vae, text_encoder, tokenizer, unet, controlnet, args, acceler
     if args.seed is None:
         generator = None
     else:
-        generator = torch.Generator(device=accelerator.device).manual_seed(args.seed)
+        generator = torch.Generator(device=accelerator.device).manual_seed(1337)
 
     if len(args.validation_image) == len(args.validation_prompt):
         validation_images = args.validation_image
