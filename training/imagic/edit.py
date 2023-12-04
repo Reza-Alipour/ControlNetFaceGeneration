@@ -313,7 +313,7 @@ def main(args):
             disable=not accelerator.is_local_main_process,
         )
         global_step = 0
-        wandb.define_metric("embedding/loss", step_metric="optimize_step")
+        # wandb.define_metric("embedding/loss", step_metric="optimize_step")
 
         for i in pbar:
             opt.zero_grad()
@@ -355,9 +355,9 @@ def main(args):
             loss = F.mse_loss(pred_noise.float(), target.float(), reduction="mean")
             
             loss.backward()
-            logs = {"embedding/loss": loss.detach().item(), "optimize_step": i}
+            logs = {"embedding/loss": loss.detach().item()}
             global_step += 1
-            accelerator.log(logs, step=global_step)
+            accelerator.log(logs)
             pbar.set_postfix({"loss": loss.item()})
             history.append(loss.item())
             opt.step()
@@ -374,7 +374,7 @@ def main(args):
         opt = torch.optim.Adam(params_to_optimize, lr=lr)
         history = []
 
-        wandb.define_metric("finetune/loss", step_metric="finetune_step")
+        # wandb.define_metric("finetune/loss", step_metric="finetune_step")
 
         pbar = tqdm(
             range(it),
@@ -423,9 +423,9 @@ def main(args):
             loss = F.mse_loss(pred_noise.float(), target.float(), reduction="mean")
             
             loss.backward()
-            logs = {"finetune/loss": loss.detach().item(), "finetune_step": i}
+            logs = {"finetune/loss": loss.detach().item()}
             global_step += 1
-            accelerator.log(logs, step=global_step)
+            accelerator.log(logs)
             pbar.set_postfix({"loss": loss.item()})
             history.append(loss.item())
             opt.step()
