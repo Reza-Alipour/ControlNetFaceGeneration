@@ -341,7 +341,7 @@ def main(args):
             logs = {"loss": loss.detach().item()}
             global_step += 1
             accelerator.log(logs, step=global_step)
-            pbar.set_postfix({"loss": loss.item()})
+            pbar.set_postfix({"embedding/loss": loss.item()})
             history.append(loss.item())
             opt.step()
             opt.zero_grad()
@@ -404,7 +404,7 @@ def main(args):
             loss = F.mse_loss(pred_noise.float(), target.float(), reduction="mean")
             
             loss.backward()
-            logs = {"loss": loss.detach().item()}
+            logs = {"finetune/loss": loss.detach().item()}
             global_step += 1
             accelerator.log(logs, step=global_step)
             pbar.set_postfix({"loss": loss.item()})
