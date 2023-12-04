@@ -313,7 +313,7 @@ def main(args):
             disable=not accelerator.is_local_main_process,
         )
         global_step = 0
-        accelerator.define_metric("embedding/loss", step_metric="optimize_step")
+        wandb.define_metric("embedding/loss", step_metric="optimize_step")
 
         for i in pbar:
             opt.zero_grad()
@@ -374,7 +374,7 @@ def main(args):
         opt = torch.optim.Adam(params_to_optimize, lr=lr)
         history = []
 
-        accelerator.define_metric("finetune/loss", step_metric="finetune_step")
+        wandb.define_metric("finetune/loss", step_metric="finetune_step")
 
         pbar = tqdm(
             range(it),
