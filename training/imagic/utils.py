@@ -412,6 +412,9 @@ def parse_args(input_args=None):
     parser.add_argument("--alpha", nargs='+', type=float, default=[0.8, 0.9, 1, 1.1])
     parser.add_argument("--num_inference_steps", nargs='+', type=int, default=[20, 40, 50])
 
+    parser.add_argument("--controlnet_load_revision", type=str, default=None)
+    parser.add_argument("--controlnet_save_revision", type=str, default=None)
+
 
     if input_args is not None:
         args = parser.parse_args(input_args)

@@ -115,7 +115,9 @@ def main(args):
 
     if args.controlnet_model_name_or_path:
         logger.info("Loading existing controlnet weights")
-        controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path, token=args.hub_read_token, revision='english')
+        controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path, 
+                                                     token=args.hub_read_token, 
+                                                     revision=args.controlnet_load_revision)
     else:
         logger.info("Initializing controlnet weights from unet")
         controlnet = ControlNetModel.from_unet(unet, revision='english')
