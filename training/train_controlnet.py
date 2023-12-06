@@ -660,7 +660,7 @@ def make_train_dataset(args, tokenizer, accelerator):
 
     def tokenize_captions(examples, is_train=True):
         captions = []
-        cpl = caption_column if random.randint(0, 1) == 0 else 'captions'
+        cpl = caption_column if random.randint(0, 3) == 0 else 'captions'
         for caption in examples[cpl]:
             if random.random() < args.proportion_empty_prompts:
                 captions.append("High quality close-up portrait of a person's face")
