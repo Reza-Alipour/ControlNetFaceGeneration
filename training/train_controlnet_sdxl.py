@@ -1004,7 +1004,10 @@ def main(args):
         original_size = (args.resolution, args.resolution)
         target_size = (args.resolution, args.resolution)
         crops_coords_top_left = (args.crops_coords_top_left_h, args.crops_coords_top_left_w)
-        prompt_batch = batch[args.caption_column]
+        if random.randint(0, 2) == 0:
+            prompt_batch = batch['captions']
+        else:
+            prompt_batch = batch[args.caption_column]
 
         prompt_embeds, pooled_prompt_embeds = encode_prompt(
             prompt_batch, text_encoders, tokenizers, proportion_empty_prompts, is_train
