@@ -676,7 +676,7 @@ def make_train_dataset(args, tokenizer, accelerator):
         inputs = tokenizer(
             captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
         )
-        return inputs.input_ids, inputs.attention_mask
+        return inputs.input_ids #, inputs.attention_mask
 
     image_transforms = transforms.Compose(
         [
@@ -704,9 +704,10 @@ def make_train_dataset(args, tokenizer, accelerator):
 
         examples["pixel_values"] = images
         examples["conditioning_pixel_values"] = conditioning_images
-        input_ids, attention_mask = tokenize_captions(examples)
+        input_ids = tokenize_captions(examples)
+        # input_ids, attention_mask = tokenize_captions(examples)
         examples["input_ids"] = input_ids
-        examples["attention_mask"] = attention_mask
+        # examples["attention_mask"] = attention_mask
 
         return examples
 
@@ -727,13 +728,13 @@ def collate_fn(examples):
     conditioning_pixel_values = conditioning_pixel_values.to(memory_format=torch.contiguous_format).float()
 
     input_ids = torch.stack([example["input_ids"] for example in examples])
-    attention_mask = torch.stack([example["attention_mask"] for example in examples])
+    # attention_mask = torch.stack([example["attention_mask"] for example in examples])
 
     return {
         "pixel_values": pixel_values,
         "conditioning_pixel_values": conditioning_pixel_values,
         "input_ids": input_ids,
-        "attention_mask": attention_mask,
+        # "attention_mask": attention_mask,
     }
 
 
@@ -1048,7 +1049,8 @@ def main(args):
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
                 # Get the text embedding for conditioning
-                encoder_hidden_states = text_encoder(batch["input_ids"], attention_mask=batch["attention_mask"])[0]
+                encoder_hidden_states = text_encoder(batch["input_ids"])[0]
+                # encoder_hidden_states = text_encoder(batch["input_ids"], attention_mask=batch["attention_mask"])[0]
 
                 controlnet_image = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
 
