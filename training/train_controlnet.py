@@ -705,7 +705,7 @@ def make_train_dataset(args, tokenizer, accelerator):
                     transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.08, saturation=0.08, hue=0.2)
                 ], p=0.3),
                 transforms.RandomApply(transforms=[
-                    transforms.ElasticTransform(alpha=float(random.randint(50, 130)))
+                    transforms.ElasticTransform(alpha=float(random.randint(50, 100)))
                 ], p=0.25),
                 transforms.ToTensor(),
             ]
