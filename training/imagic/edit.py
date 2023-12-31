@@ -247,6 +247,10 @@ def main(args):
         params_to_optimize = [
             {'params': params[154:], 'lr': args.learning_rate},
         ]
+    elif args.unet_layer == 'all': # all layers
+        params_to_optimize = [
+            {'params': params, 'lr': args.learning_rate},
+        ]
 
     train_dataset = make_train_dataset(args, tokenizer, accelerator)
     train_dataloader = torch.utils.data.DataLoader(
