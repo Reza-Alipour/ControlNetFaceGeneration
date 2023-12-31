@@ -708,10 +708,10 @@ def make_train_dataset(args, tokenizer, accelerator):
             [
                 transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
                 transforms.CenterCrop(args.resolution),
-                transforms.RandomAdjustSharpness(1.5, p=0.3),
-                transforms.RandomApply(transforms=[
-                    transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.08, saturation=0.08, hue=0.04)
-                ], p=0.25),
+                transforms.RandomAdjustSharpness(1.5, p=0.2),
+                # transforms.RandomApply(transforms=[
+                #     transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.08, saturation=0.08, hue=0.04)
+                # ], p=0.25),
                 transforms.ToTensor(),
                 transforms.Normalize([0.5], [0.5]),
             ]
@@ -723,10 +723,10 @@ def make_train_dataset(args, tokenizer, accelerator):
                 transforms.CenterCrop(args.resolution),
                 transforms.RandomApply(transforms=[
                     transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.08, saturation=0.08, hue=0.2)
-                ], p=0.3),
+                ], p=0.2),
                 transforms.RandomApply(transforms=[
                     transforms.ElasticTransform(alpha=float(random.randint(50, 100)))
-                ], p=0.25),
+                ], p=0.2),
                 transforms.ToTensor(),
             ]
         )
@@ -736,9 +736,9 @@ def make_train_dataset(args, tokenizer, accelerator):
                 transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
                 transforms.CenterCrop(args.resolution),
                 transforms.RandomAdjustSharpness(1.5, p=0.2),
-                transforms.RandomApply(transforms=[
-                    transforms.ColorJitter(brightness=(0.9, 1.1), contrast=0.05, saturation=0.05, hue=0.02)
-                ], p=0.25),
+                # transforms.RandomApply(transforms=[
+                #     transforms.ColorJitter(brightness=(0.9, 1.1), contrast=0.05, saturation=0.05, hue=0.02)
+                # ], p=0.25),
                 transforms.ToTensor(),
                 transforms.Normalize([0.5], [0.5]),
             ]
@@ -750,7 +750,7 @@ def make_train_dataset(args, tokenizer, accelerator):
                 transforms.CenterCrop(args.resolution),
                 transforms.RandomApply(transforms=[
                     transforms.ColorJitter(brightness=(0.95, 1.1), contrast=0.05, saturation=0.05, hue=0.05)
-                ], p=0.3),
+                ], p=0.2),
                 transforms.ToTensor(),
             ]
         )
