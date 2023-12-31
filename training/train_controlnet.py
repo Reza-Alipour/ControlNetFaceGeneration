@@ -550,6 +550,7 @@ def parse_args(input_args=None):
     )
     parser.add_argument("--controlnet_load_revision", type=str, default=None)
     parser.add_argument("--controlnet_save_revision", type=str, default=None)
+    parser.add_argument("--high_augment_level", action="store_true")
 
     if input_args is not None:
         args = parser.parse_args(input_args)
@@ -678,40 +679,65 @@ def make_train_dataset(args, tokenizer, accelerator):
         )
         return inputs.input_ids #, inputs.attention_mask
 
-    image_transforms = transforms.Compose(
-        [
-            transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.CenterCrop(args.resolution),
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomApply(transforms=[
-                transforms.RandomRotation(degrees=20)
-            ], p=0.3),
-            transforms.RandomAdjustSharpness(2, p=0.3),
-            transforms.RandomApply(transforms=[
-                transforms.ColorJitter(brightness=(0.9, 1.3), contrast=0.1, saturation=0.1, hue=0.05)
-            ], p=0.25),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5]),
-        ]
-    )
+    if args.high_augment_level:
+        image_transforms = transforms.Compose(
+            [
+                transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
+                transforms.CenterCrop(args.resolution),
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.RandomApply(transforms=[transforms.RandomRotation(degrees=15)], p=0.3),
+                transforms.RandomAdjustSharpness(1.5, p=0.3),
+                transforms.RandomApply(transforms=[
+                    transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.08, saturation=0.08, hue=0.04)
+                ], p=0.25),
+                transforms.ToTensor(),
+                transforms.Normalize([0.5], [0.5]),
+            ]
+        )
 
-    conditioning_image_transforms = transforms.Compose(
-        [
-            transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.CenterCrop(args.resolution),
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomApply(transforms=[
-                transforms.RandomRotation(degrees=20)
-            ], p=0.3),
-            transforms.RandomApply(transforms=[
-                transforms.ColorJitter(brightness=(0.9, 1.3), contrast=0.1, saturation=0.1, hue=0.3)
-            ], p=0.3),
-            transforms.RandomApply(transforms=[
-                transforms.ElasticTransform(alpha=float(random.randint(50, 130)))
-            ], p=0.25),
-            transforms.ToTensor(),
-        ]
-    )
+        conditioning_image_transforms = transforms.Compose(
+            [
+                transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
+                transforms.CenterCrop(args.resolution),
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.RandomApply(transforms=[transforms.RandomRotation(degrees=15)], p=0.3),
+                transforms.RandomApply(transforms=[
+                    transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.08, saturation=0.08, hue=0.2)
+                ], p=0.3),
+                transforms.RandomApply(transforms=[
+                    transforms.ElasticTransform(alpha=float(random.randint(50, 130)))
+                ], p=0.25),
+                transforms.ToTensor(),
+            ]
+        )
+    else:
+        image_transforms = transforms.Compose(
+            [
+                transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
+                transforms.CenterCrop(args.resolution),
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.RandomApply(transforms=[transforms.RandomRotation(degrees=10)], p=0.2),
+                transforms.RandomAdjustSharpness(1.5, p=0.2),
+                transforms.RandomApply(transforms=[
+                    transforms.ColorJitter(brightness=(0.9, 1.1), contrast=0.05, saturation=0.05, hue=0.02)
+                ], p=0.25),
+                transforms.ToTensor(),
+                transforms.Normalize([0.5], [0.5]),
+            ]
+        )
+
+        conditioning_image_transforms = transforms.Compose(
+            [
+                transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
+                transforms.CenterCrop(args.resolution),
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.RandomApply(transforms=[transforms.RandomRotation(degrees=10)], p=0.2),
+                transforms.RandomApply(transforms=[
+                    transforms.ColorJitter(brightness=(0.95, 1.1), contrast=0.05, saturation=0.05, hue=0.05)
+                ], p=0.3),
+                transforms.ToTensor(),
+            ]
+        )
 
     def preprocess_train(examples):
         current_rng_state = torch.get_rng_state()
