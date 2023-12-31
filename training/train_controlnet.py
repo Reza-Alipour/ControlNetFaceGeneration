@@ -46,6 +46,7 @@ from diffusers import (
     StableDiffusionControlNetPipeline,
     UNet2DConditionModel,
     UniPCMultistepScheduler,
+    PNDMScheduler,
 )
 from diffusers.optimization import get_scheduler
 from diffusers.utils import check_min_version, is_wandb_available
@@ -54,7 +55,7 @@ from huggingface_hub import create_repo, upload_folder
 from packaging import version
 from torchvision import transforms
 from tqdm.auto import tqdm
-from transformers import AutoTokenizer, PretrainedConfig, Adafactor
+from transformers import AutoTokenizer, PretrainedConfig, Adafactor, CLIPFeatureExtractor
 
 if is_wandb_available():
     import wandb
@@ -80,19 +81,42 @@ def log_validation(vae, text_encoder, tokenizer, unet, controlnet, args, acceler
     logger.info("Running validation... ")
 
     controlnet = accelerator.unwrap_model(controlnet)
-
-    pipeline = StableDiffusionControlNetPipeline.from_pretrained(
-        args.pretrained_model_name_or_path,
-        vae=vae,
-        text_encoder=text_encoder,
-        tokenizer=tokenizer,
-        unet=unet,
-        controlnet=controlnet,
-        safety_checker=None,
-        revision=args.revision,
-        torch_dtype=weight_dtype,
-    )
-    pipeline.scheduler = UniPCMultistepScheduler.from_config(pipeline.scheduler.config)
+    if args.pretrained_model_name_or_path.startswith('BAAI'):
+        scheduler = PNDMScheduler.from_pretrained(
+            args.pretrained_model_name_or_path,
+            subfolder='scheduler',
+            revision=args.revision
+        )
+        scheduler = UniPCMultistepScheduler.from_config(scheduler.config)
+        feature_extractor = CLIPFeatureExtractor.from_pretrained(
+            args.pretrained_model_name_or_path,
+            subfolder='feature_extractor',
+            revision=args.revision
+        )
+        pipeline = StableDiffusionControlNetPipeline(
+            vae=vae,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            unet=unet,
+            controlnet=controlnet,
+            scheduler=scheduler,
+            safety_checker=None,
+            requires_safety_checker=False,
+            feature_extractor=feature_extractor
+        )
+    else:
+        pipeline = StableDiffusionControlNetPipeline.from_pretrained(
+            args.pretrained_model_name_or_path,
+            vae=vae,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            unet=unet,
+            controlnet=controlnet,
+            safety_checker=None,
+            revision=args.revision,
+            torch_dtype=weight_dtype,
+        )
+        pipeline.scheduler = UniPCMultistepScheduler.from_config(pipeline.scheduler.config)
     pipeline = pipeline.to(accelerator.device)
     pipeline.set_progress_bar_config(disable=True)
 
