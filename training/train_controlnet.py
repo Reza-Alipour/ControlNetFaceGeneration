@@ -708,8 +708,6 @@ def make_train_dataset(args, tokenizer, accelerator):
             [
                 transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
                 transforms.CenterCrop(args.resolution),
-                transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomApply(transforms=[transforms.RandomRotation(degrees=15)], p=0.3),
                 transforms.RandomAdjustSharpness(1.5, p=0.3),
                 transforms.RandomApply(transforms=[
                     transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.08, saturation=0.08, hue=0.04)
@@ -723,8 +721,6 @@ def make_train_dataset(args, tokenizer, accelerator):
             [
                 transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
                 transforms.CenterCrop(args.resolution),
-                transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomApply(transforms=[transforms.RandomRotation(degrees=15)], p=0.3),
                 transforms.RandomApply(transforms=[
                     transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.08, saturation=0.08, hue=0.2)
                 ], p=0.3),
@@ -739,8 +735,6 @@ def make_train_dataset(args, tokenizer, accelerator):
             [
                 transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
                 transforms.CenterCrop(args.resolution),
-                transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomApply(transforms=[transforms.RandomRotation(degrees=10)], p=0.2),
                 transforms.RandomAdjustSharpness(1.5, p=0.2),
                 transforms.RandomApply(transforms=[
                     transforms.ColorJitter(brightness=(0.9, 1.1), contrast=0.05, saturation=0.05, hue=0.02)
@@ -754,8 +748,6 @@ def make_train_dataset(args, tokenizer, accelerator):
             [
                 transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
                 transforms.CenterCrop(args.resolution),
-                transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomApply(transforms=[transforms.RandomRotation(degrees=10)], p=0.2),
                 transforms.RandomApply(transforms=[
                     transforms.ColorJitter(brightness=(0.95, 1.1), contrast=0.05, saturation=0.05, hue=0.05)
                 ], p=0.3),
@@ -764,18 +756,19 @@ def make_train_dataset(args, tokenizer, accelerator):
         )
 
     def preprocess_train(examples):
-        current_rng_state = torch.get_rng_state()
-        seed = random.randint(0, 1000000000000)
-
-        torch.manual_seed(seed)
-        images = [image.convert("RGB") for image in examples[image_column]]
+        images = []
+        conditioning_images = []
+        for e in examples:
+            should_flip = random.randint(0, 1)
+            image = e[image_column].convert('RGB')
+            condition = e[conditioning_image_column].convert('RGB')
+            if should_flip:
+                image = image.transpose(Image.FLIP_LEFT_RIGHT)
+                condition = condition.transpose(Image.FLIP_LEFT_RIGHT)
+            images.append(image)
+            conditioning_images.append(condition)
         images = [image_transforms(image) for image in images]
-
-        torch.manual_seed(seed)
-        conditioning_images = [image.convert("RGB") for image in examples[conditioning_image_column]]
         conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
-
-        torch.set_rng_state(current_rng_state)
 
         examples["pixel_values"] = images
         examples["conditioning_pixel_values"] = conditioning_images
