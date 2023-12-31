@@ -758,10 +758,12 @@ def make_train_dataset(args, tokenizer, accelerator):
     def preprocess_train(examples):
         images = []
         conditioning_images = []
-        for e in examples:
+        examples_images = [image.convert("RGB") for image in examples[image_column]]
+        examples_conditions = [image.convert("RGB") for image in examples[conditioning_image_column]]
+
+        for i, image in enumerate(examples_images):
             should_flip = random.randint(0, 1)
-            image = e[image_column].convert('RGB')
-            condition = e[conditioning_image_column].convert('RGB')
+            condition = examples_conditions[i]
             if should_flip:
                 image = image.transpose(Image.FLIP_LEFT_RIGHT)
                 condition = condition.transpose(Image.FLIP_LEFT_RIGHT)
