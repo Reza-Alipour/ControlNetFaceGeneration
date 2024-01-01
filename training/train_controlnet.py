@@ -710,7 +710,7 @@ def make_train_dataset(args, tokenizer, accelerator):
                 transforms.CenterCrop(args.resolution),
                 transforms.RandomAdjustSharpness(1.5, p=0.2),
                 transforms.RandomApply(transforms=[
-                    transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.05, saturation=0.08, hue=0.04)
+                    transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.05, saturation=0.08, hue=0.02)
                 ], p=0.25),
                 transforms.ToTensor(),
                 transforms.Normalize([0.5], [0.5]),
