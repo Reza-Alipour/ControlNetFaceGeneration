@@ -687,7 +687,7 @@ def encode_prompt(prompt_batch, text_encoders, tokenizers, proportion_empty_prom
     captions = []
     for caption in prompt_batch:
         if random.random() < proportion_empty_prompts:
-            captions.append("")
+            captions.append("High quality close-up portrait of a person's face")
         elif isinstance(caption, str):
             captions.append(caption)
         elif isinstance(caption, (list, np.ndarray)):
@@ -726,6 +726,7 @@ def prepare_train_dataset(dataset, accelerator):
         [
             transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
             transforms.CenterCrop(args.resolution),
+            transforms.RandomAdjustSharpness(1.5, p=0.2),
             transforms.ToTensor(),
             transforms.Normalize([0.5], [0.5]),
         ]
@@ -735,16 +736,29 @@ def prepare_train_dataset(dataset, accelerator):
         [
             transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
             transforms.CenterCrop(args.resolution),
+            transforms.RandomApply(transforms=[
+                transforms.ColorJitter(brightness=(0.9, 1.2), contrast=0.08, saturation=0.08, hue=0.2)
+            ], p=0.2),
+            transforms.RandomApply(transforms=[
+                transforms.ElasticTransform(alpha=float(random.randint(50, 100)))
+            ], p=0.2),
             transforms.ToTensor(),
         ]
     )
 
     def preprocess_train(examples):
-        images = [image.convert("RGB") for image in examples[args.image_column]]
-        images = [image_transforms(image) for image in images]
+        images = []
+        conditioning_images = []
 
-        conditioning_images = [image.convert("RGB") for image in examples[args.conditioning_image_column]]
-        conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
+        for i in range(len(examples['image'])):
+            should_flip = random.randint(0, 1)
+            image = examples['image'][i].convert("RGB")
+            condition = examples['mask'][i].convert("RGB")
+            if should_flip:
+                image = image.transpose(Image.FLIP_LEFT_RIGHT)
+                condition = condition.transpose(Image.FLIP_LEFT_RIGHT)
+            images.append(image_transforms(image))
+            conditioning_images.append(conditioning_image_transforms(condition))
 
         examples["pixel_values"] = images
         examples["conditioning_pixel_values"] = conditioning_images
@@ -1043,7 +1057,7 @@ def main(args):
         # fingerprint used by the cache for the other processes to load the result
         # details: https://github.com/huggingface/diffusers/pull/4038#discussion_r1266078401
         new_fingerprint = Hasher.hash(args)
-        train_dataset = train_dataset.map(compute_embeddings_fn, batched=True, new_fingerprint=new_fingerprint)
+        train_dataset = train_dataset.map(compute_embeddings_fn, batched=True, new_fingerprint=new_fingerprint, batch_size=100)
 
     del text_encoders, tokenizers
     gc.collect()
