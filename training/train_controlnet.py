@@ -758,19 +758,20 @@ def make_train_dataset(args, tokenizer, accelerator):
     def preprocess_train(examples):
         images = []
         conditioning_images = []
-        examples_images = [image.convert("RGB") for image in examples[image_column]]
-        examples_conditions = [image.convert("RGB") for image in examples[conditioning_image_column]]
+        # examples_images = [image.convert("RGB") for image in examples[image_column]]
+        # examples_conditions = [image.convert("RGB") for image in examples[conditioning_image_column]]
 
-        for i, image in enumerate(examples_images):
+        for i in range(len(examples[image_column])):
             should_flip = random.randint(0, 1)
-            condition = examples_conditions[i]
+            image = examples[image_column][i].convert("RGB")
+            condition = examples[conditioning_image_column][i].convert("RGB")
             if should_flip:
                 image = image.transpose(Image.FLIP_LEFT_RIGHT)
                 condition = condition.transpose(Image.FLIP_LEFT_RIGHT)
-            images.append(image)
-            conditioning_images.append(condition)
-        images = [image_transforms(image) for image in images]
-        conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
+            images.append(image_transforms(image))
+            conditioning_images.append(conditioning_image_transforms(condition))
+        # images = [image_transforms(image) for image in images]
+        # conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
 
         examples["pixel_values"] = images
         examples["conditioning_pixel_values"] = conditioning_images
@@ -912,7 +913,8 @@ def main(args):
         accelerator.register_load_state_pre_hook(load_model_hook)
 
     vae.requires_grad_(False)
-    unet.requires_grad_(False)
+    unet.requires_grad_(True)
+    unet.train()
     text_encoder.requires_grad_(False)
     controlnet.train()
 
@@ -970,7 +972,17 @@ def main(args):
         optimizer_class = torch.optim.AdamW
 
     # Optimizer creation
-    params_to_optimize = controlnet.parameters()
+
+    unet_params = []
+    for name, param in unet.named_parameters():
+        if(name.startswith('up_blocks')):
+            unet_params.append(param)
+
+    
+    params_to_optimize = [
+            {'params': controlnet.parameters()},
+            {'params': unet_params},
+    ]
     if optimizer_class == Adafactor:
         optimizer = Adafactor(
             params_to_optimize,
@@ -1216,6 +1228,8 @@ def main(args):
     if accelerator.is_main_process:
         controlnet = accelerator.unwrap_model(controlnet)
         controlnet.save_pretrained(args.output_dir)
+        unet = accelerator.unwrap_model(unet)
+        unet.save_pretrained(f'{args.output_dir}/unet')
 
         if args.push_to_hub:
             save_model_card(
